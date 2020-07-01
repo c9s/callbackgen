@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	lockFieldStr = flag.String("lockField", "", "mutex lock that will be used for locking callback fields")
 	typeNamesStr = flag.String("type", "", "comma-separated list of type names; must be set")
 	outputStdout = flag.Bool("stdout", false, "output generated content to the stdout")
 	output       = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
@@ -48,6 +49,8 @@ type Field struct {
 
 	// FieldName = snapshotCallbacks
 	FieldName string
+
+	LockField *string
 
 	// snapshot
 	EventName           string
@@ -164,8 +167,6 @@ func (g *Generator) Printf(format string, args ...interface{}) {
 
 func (g *Generator) generate(typeName string) {
 	// collect the fields and types
-	// log.Printf("defs: %+v", g.pkg.pkg.TypesInfo.Defs)
-
 	for _, file := range g.pkg.files {
 		// Set the state for this run of the walker.
 		if file.file == nil {
@@ -265,13 +266,11 @@ func (g *Generator) generate(typeName string) {
 
 							callbackMapKeyType, ok = a.Key().(*types.Named)
 							if !ok {
-								log.Printf("the key of map %v is not a named type", field.Names)
 								continue
 							}
 
 							mapElemSlice, ok := a.Elem().(*types.Slice)
 							if !ok {
-								log.Printf("map %v does not contains a slice type", field.Names)
 								continue
 							}
 							callbackSliceType = mapElemSlice
@@ -302,6 +301,8 @@ func (g *Generator) generate(typeName string) {
 
 								CallbackMapType:    callbackMapType,
 								CallbackMapKeyType: callbackMapKeyType,
+
+								LockField: lockFieldStr,
 							})
 						}
 					}
@@ -405,6 +406,11 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) On{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
 	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, cb {{ .Field.CallbackTypeName -}}
 ) {
+{{- if gt (len .Field.LockField) 0 }}
+	{{- .RecvName }}.{{ .Field.LockField }}.Lock()
+	defer {{- .RecvName }}.{{ .Field.LockField }}.Unlock()
+{{- end }}
+
 	if {{ .RecvName }}.{{ .Field.FieldName }} == nil {
 		{{ .RecvName }}.{{ .Field.FieldName }} = make( {{- .Field.CallbackMapType | typeString -}} )
 	}

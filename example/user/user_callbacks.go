@@ -66,6 +66,7 @@ func (a *User) RemoveOnMessage(needle TextMessageCallback) (found bool) {
 }
 
 func (a *User) OnMessageByRequestID(requestID RequestID, cb TextMessageCallback) {
+
 	if a.messageByRequestIDCallbacks == nil {
 		a.messageByRequestIDCallbacks = make(map[RequestID][]TextMessageCallback)
 	}
