@@ -17,8 +17,7 @@ func (a *User) EmitSnapshot(snapshot int) {
 	}
 }
 
-func (a *User) RemoveOnSnapshot(
-	needle SnapshotCallback) (found bool) {
+func (a *User) RemoveOnSnapshot(needle SnapshotCallback) (found bool) {
 
 	var newcallbacks []SnapshotCallback
 	var fp = reflect.ValueOf(needle).Pointer()
@@ -47,8 +46,7 @@ func (a *User) EmitMessage(message *bytes.Buffer) {
 	}
 }
 
-func (a *User) RemoveOnMessage(
-	needle TextMessageCallback) (found bool) {
+func (a *User) RemoveOnMessage(needle TextMessageCallback) (found bool) {
 
 	var newcallbacks []TextMessageCallback
 	var fp = reflect.ValueOf(needle).Pointer()
@@ -68,10 +66,18 @@ func (a *User) RemoveOnMessage(
 }
 
 func (a *User) OnMessageByRequestID(requestID RequestID, cb TextMessageCallback) {
+	if a.messageByRequestIDCallbacks == nil {
+		a.messageByRequestIDCallbacks = make(map[RequestID][]TextMessageCallback)
+	}
+
 	a.messageByRequestIDCallbacks[requestID] = append(a.messageByRequestIDCallbacks[requestID], cb)
 }
 
 func (a *User) EmitMessageByRequestID(requestID RequestID, message *bytes.Buffer) {
+	if a.messageByRequestIDCallbacks == nil {
+		return
+	}
+
 	callbacks, ok := a.messageByRequestIDCallbacks[requestID]
 	if !ok {
 		return
@@ -116,8 +122,7 @@ func (a *User) EmitPatch(a1 int, b1 int) {
 	}
 }
 
-func (a *User) RemoveOnPatch(
-	needle func(a1 int, b1 int)) (found bool) {
+func (a *User) RemoveOnPatch(needle func(a1 int, b1 int)) (found bool) {
 
 	var newcallbacks []func(a1 int, b1 int)
 	var fp = reflect.ValueOf(needle).Pointer()

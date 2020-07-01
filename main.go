@@ -405,6 +405,10 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) On{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
 	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, cb {{ .Field.CallbackTypeName -}}
 ) {
+	if {{ .RecvName }}.{{ .Field.FieldName }} == nil {
+		{{ .RecvName }}.{{ .Field.FieldName }} = make( {{- .Field.CallbackMapType | typeString -}} )
+	}
+
 	{{ .RecvName }}.{{ .Field.FieldName }}[
 		{{- .Field.CallbackMapKeyType | typeString | camelCase -}}
 	] = append({{- .RecvName }}.{{ .Field.FieldName }}[
@@ -416,6 +420,10 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 			{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}},
 			{{- .Field.CallbackParamsTuple | tupleString -}}
 ) {
+	if {{ .RecvName }}.{{ .Field.FieldName }} == nil {
+		return
+	}
+
 	callbacks, ok := {{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ]
 	if !ok {
 		return
