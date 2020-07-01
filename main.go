@@ -425,7 +425,9 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		}
 	}
 
-	{{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ] = newcallbacks
+	if found {
+		{{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ] = newcallbacks
+	}
 
 	return found
 }
