@@ -377,6 +377,26 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 		cb({{ .Field.CallbackParamsVarNames  | join ", " }})
 	}
 }
+
+func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} (needle {{ .Field.CallbackTypeName -}}) (found bool) {
+
+	var newcallbacks {{ .Field.CallbackSliceType | typeString }}
+	var fp = reflect.ValueOf(needle).Pointer()
+	for _, cb := range {{ .RecvName }}.{{ .Field.FieldName }} {
+		if fp == reflect.ValueOf(cb).Pointer() {
+			found = true
+		} else {
+			newcallbacks = append(newcallbacks, cb)
+		}
+	}
+
+	if found {
+		{{ .RecvName }}.{{ .Field.FieldName }}  = newcallbacks
+	}
+
+	return found
+}
+
 `))
 
 	var mapSliceCallbackTmpl = template.New("map-slice-callbacks").Funcs(funcMap)
