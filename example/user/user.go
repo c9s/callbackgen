@@ -19,7 +19,7 @@ type User struct {
 
 	messageByRequestIDCallbacks map[RequestID][]TextMessageCallback
 
-	patchCallbacks []func(a int, b int)
+	patchCallbacks []func(a1 int, b1 int)
 }
 
 func (a *User) String() string {

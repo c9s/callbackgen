@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
+	"go/importer"
 	"go/token"
 	"go/types"
 	"io/ioutil"
@@ -53,8 +54,8 @@ type Field struct {
 	CallbackElementType types.Type
 	CallbackSliceType   *types.Slice
 
-	CallbackMapType     *types.Map
-	CallbackMapKeyType  *types.Named
+	CallbackMapType    *types.Map
+	CallbackMapKeyType *types.Named
 
 	IsSlice    bool
 	IsMapSlice bool
@@ -295,11 +296,11 @@ func (g *Generator) generate(typeName string) {
 								FieldName:           field.Names[0].Name,
 								CallbackElementType: callbackSliceType.Elem(),
 
-								IsSlice:         isSlice,
-								IsMapSlice:      isMapSlice,
+								IsSlice:           isSlice,
+								IsMapSlice:        isMapSlice,
 								CallbackSliceType: callbackSliceType,
 
-								CallbackMapType: callbackMapType,
+								CallbackMapType:    callbackMapType,
 								CallbackMapKeyType: callbackMapKeyType,
 							})
 						}
@@ -315,7 +316,16 @@ func (g *Generator) generate(typeName string) {
 		})
 	}
 
-	var usedImports []*types.Package
+	conf := types.Config{Importer: importer.Default()}
+	pkgReflect, err := conf.Importer.Import("reflect")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var usedImports = map[string]*types.Package{
+		pkgReflect.Name(): pkgReflect,
+	}
+
 	pkgTypes := g.pkg.pkg.Types
 	qf := func(other *types.Package) string {
 		if pkgTypes == other {
@@ -325,7 +335,7 @@ func (g *Generator) generate(typeName string) {
 		// solve imports
 		for _, ip := range pkgTypes.Imports() {
 			if other == ip {
-				usedImports = append(usedImports, ip)
+				usedImports[ip.Name()] = ip
 				return ip.Name()
 			}
 		}
@@ -395,8 +405,31 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 		cb({{ .Field.CallbackParamsVarNames  | join ", " }})
 	}
 }
-`))
 
+func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
+	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, needle {{ .Field.CallbackTypeName -}}
+) (found bool) {
+
+	callbacks, ok := {{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ]
+	if !ok {
+		return
+	}
+	
+	var newcallbacks {{ .Field.CallbackSliceType | typeString }}
+	var fp = reflect.ValueOf(needle).Pointer()
+	for _, cb := range callbacks {
+		if fp == reflect.ValueOf(cb).Pointer() {
+			found = true
+		} else {
+			newcallbacks = append(newcallbacks, cb)
+		}
+	}
+
+	{{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ] = newcallbacks
+
+	return found
+}
+`))
 
 	// scan imports in the first run
 	for _, field := range g.callbackFields {
@@ -539,7 +572,7 @@ func TupleString(tup *types.Tuple, variadic bool, qf types.Qualifier) string {
 	// buf.WriteByte('(')
 	if tup != nil {
 
-		for i := 0 ; i < tup.Len() ; i++ {
+		for i := 0; i < tup.Len(); i++ {
 			v := tup.At(i)
 			if i > 0 {
 				buf.WriteString(", ")
@@ -574,4 +607,3 @@ func TupleString(tup *types.Tuple, variadic bool, qf types.Qualifier) string {
 	// buf.WriteByte(')')
 	return buf.String()
 }
-
