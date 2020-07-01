@@ -496,7 +496,7 @@ func isDirectory(name string) bool {
 
 func main() {
 	log.SetFlags(0)
-	log.SetPrefix("stringer: ")
+	log.SetPrefix("callbackgen: ")
 	flag.Parse()
 	if len(*typeNamesStr) == 0 {
 		flag.Usage()
