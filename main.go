@@ -96,19 +96,19 @@ func (f Field) CallbackParamsVarNames() (names []string) {
 	return names
 }
 
-func (f Field) CallbackTypeName() string {
+func (f Field) CallbackTypeName(qf types.Qualifier) string {
 	switch callbackType := f.CallbackElementType.(type) {
 
 	// pure signature callback
 	case *types.Signature:
-		return callbackType.String()
+		return types.TypeString(callbackType, qf)
 
 	// named type callback
 	case *types.Named:
 		return callbackType.Obj().Name()
 
 	default:
-		return callbackType.String()
+		return types.TypeString(callbackType, qf)
 
 	}
 }
@@ -345,10 +345,9 @@ func (g *Generator) generate(typeName string) {
 	}
 
 	type TemplateArgs struct {
-		RecvName         string
-		CallbackTypeName string
-		CallbackParams   string
-		Field            Field
+		RecvName       string
+		Field          Field
+		Qualifier      types.Qualifier
 	}
 
 	funcMap := template.FuncMap{
@@ -369,7 +368,7 @@ func (g *Generator) generate(typeName string) {
 	var sliceCallbackTmpl = template.New("slice-callbacks").Funcs(funcMap)
 	sliceCallbackTmpl = template.Must(sliceCallbackTmpl.Parse(`
 
-func ( {{- .RecvName }} *{{ .Field.StructName -}} ) On{{- .Field.EventName -}} (cb {{ .Field.CallbackTypeName -}} ) {
+func ( {{- .RecvName }} *{{ .Field.StructName -}} ) On{{- .Field.EventName -}} (cb {{ .Field.CallbackTypeName .Qualifier -}} ) {
 	{{ .RecvName }}.{{ .Field.FieldName }} = append({{- .RecvName }}.{{ .Field.FieldName }}, cb)
 }
 
@@ -379,7 +378,7 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 	}
 }
 
-func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} (needle {{ .Field.CallbackTypeName -}}) (found bool) {
+func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} (needle {{ .Field.CallbackTypeName .Qualifier -}}) (found bool) {
 
 	var newcallbacks {{ .Field.CallbackSliceType | typeString }}
 	var fp = reflect.ValueOf(needle).Pointer()
@@ -404,11 +403,11 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 	mapSliceCallbackTmpl = template.Must(mapSliceCallbackTmpl.Parse(`
 
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) On{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
-	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, cb {{ .Field.CallbackTypeName -}}
+	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, cb {{ .Field.CallbackTypeName .Qualifier -}}
 ) {
 {{- if gt (len .Field.LockField) 0 }}
-	{{- .RecvName }}.{{ .Field.LockField }}.Lock()
-	defer {{- .RecvName }}.{{ .Field.LockField }}.Unlock()
+	{{ .RecvName }}.{{ .Field.LockField }}.Lock()
+	defer {{ .RecvName }}.{{ .Field.LockField }}.Unlock()
 {{- end }}
 
 	if {{ .RecvName }}.{{ .Field.FieldName }} == nil {
@@ -441,7 +440,7 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 }
 
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
-	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, needle {{ .Field.CallbackTypeName -}}
+	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, needle {{ .Field.CallbackTypeName .Qualifier -}}
 ) (found bool) {
 
 	callbacks, ok := {{ .RecvName }}.{{ .Field.FieldName }}[ {{- .Field.CallbackMapKeyType | typeString | camelCase -}}  ]
@@ -498,10 +497,9 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		}
 
 		err := t.Execute(&g.buf, TemplateArgs{
-			Field:            field,
-			RecvName:         recvName,
-			CallbackTypeName: field.CallbackTypeName(),
-			CallbackParams:   types.TypeString(field.CallbackParamsTuple(), qf),
+			Field:          field,
+			RecvName:       recvName,
+			Qualifier:      qf,
 		})
 		if err != nil {
 			log.Fatal(err)

@@ -2,6 +2,7 @@ package user
 
 import (
 	"bytes"
+	"sync"
 )
 
 type SnapshotCallback func(snapshot int)
@@ -12,6 +13,8 @@ type RequestID string
 
 type User struct {
 	Name string
+
+	mu sync.Mutex
 
 	snapshotCallbacks []SnapshotCallback
 
