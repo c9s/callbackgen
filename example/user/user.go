@@ -11,6 +11,8 @@ type TextMessageCallback func(message *bytes.Buffer)
 
 type RequestID string
 
+
+//go:generate callbackgen -type User
 type User struct {
 	Name string
 
