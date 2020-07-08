@@ -12,3 +12,13 @@ type Stream struct {
 	messageCallbacks []TextMessageCallback
 }
 ```
+
+then you will have the following methods:
+
+- OnSnapshot(cb SnapshotCallback)
+- RemoveOnSnapshot(cb SnapshotCallback)
+- EmitSnapshot(snapshot Snapshot)
+
+- OnMessage(cb TextMessageCallback)
+- RemoveOnMessage(cb TextMessageCallback)
+- EmitMessage(message TextMessage)
