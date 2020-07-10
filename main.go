@@ -21,11 +21,12 @@ import (
 )
 
 var (
-	lockFieldStr = flag.String("lockField", "", "mutex lock that will be used for locking callback fields")
-	typeNamesStr = flag.String("type", "", "comma-separated list of type names; must be set")
-	outputStdout = flag.Bool("stdout", false, "output generated content to the stdout")
-	output       = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
-	buildTags    = flag.String("tags", "", "comma-separated list of build tags to apply")
+	lockFieldStr      = flag.String("lockField", "", "mutex lock that will be used for locking callback fields")
+	typeNamesStr      = flag.String("type", "", "comma-separated list of type names; must be set")
+	generateInterface = flag.Bool("interface", false, "generate eventhub interface")
+	outputStdout      = flag.Bool("stdout", false, "output generated content to the stdout")
+	output            = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
+	buildTags         = flag.String("tags", "", "comma-separated list of build tags to apply")
 )
 
 // File holds a single parsed file and associated data.
@@ -522,20 +523,21 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		}
 	}
 
-	err = eventHubTemplate.Execute(&g.buf, struct {
-		StructName string
-		Fields     []Field
-		Qualifier  types.Qualifier
-	}{
-		StructName: g.callbackFields[0].StructName,
-		Fields:     g.callbackFields,
-		Qualifier:  qf,
-	})
+	if *generateInterface {
+		err = eventHubTemplate.Execute(&g.buf, struct {
+			StructName string
+			Fields     []Field
+			Qualifier  types.Qualifier
+		}{
+			StructName: g.callbackFields[0].StructName,
+			Fields:     g.callbackFields,
+			Qualifier:  qf,
+		})
 
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-
 }
 
 func (g *Generator) format() []byte {
