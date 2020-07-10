@@ -345,9 +345,9 @@ func (g *Generator) generate(typeName string) {
 	}
 
 	type TemplateArgs struct {
-		RecvName       string
-		Field          Field
-		Qualifier      types.Qualifier
+		RecvName  string
+		Field     Field
+		Qualifier types.Qualifier
 	}
 
 	funcMap := template.FuncMap{
@@ -397,6 +397,22 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 	return found
 }
 
+`))
+
+	var eventHubTemplate = template.New("event-hub").Funcs(funcMap)
+	// given fields
+	eventHubTemplate = template.Must(eventHubTemplate.Parse(`
+type {{ .StructName }}EventHub interface {
+{{ range .Fields }}
+{{ if .IsMapSlice }}
+	On{{- .EventName -}} By {{- .CallbackMapKeyType | typeString -}} (
+		{{- .CallbackMapKeyType | typeString | camelCase }} {{ .CallbackMapKeyType | typeString -}}, cb {{ .CallbackTypeName $.Qualifier -}}
+	)
+{{- else }}
+	On{{- .EventName -}} (cb {{ .CallbackTypeName $.Qualifier -}} )
+{{- end }}
+{{ end }}
+}
 `))
 
 	var mapSliceCallbackTmpl = template.New("map-slice-callbacks").Funcs(funcMap)
@@ -497,14 +513,29 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		}
 
 		err := t.Execute(&g.buf, TemplateArgs{
-			Field:          field,
-			RecvName:       recvName,
-			Qualifier:      qf,
+			Field:     field,
+			RecvName:  recvName,
+			Qualifier: qf,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+
+	err = eventHubTemplate.Execute(&g.buf, struct {
+		StructName string
+		Fields     []Field
+		Qualifier  types.Qualifier
+	}{
+		StructName: g.callbackFields[0].StructName,
+		Fields:     g.callbackFields,
+		Qualifier:  qf,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func (g *Generator) format() []byte {
