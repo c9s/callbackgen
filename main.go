@@ -21,12 +21,14 @@ import (
 )
 
 var (
-	lockFieldStr      = flag.String("lockField", "", "mutex lock that will be used for locking callback fields")
-	typeNamesStr      = flag.String("type", "", "comma-separated list of type names; must be set")
-	generateInterface = flag.Bool("interface", false, "generate eventhub interface")
-	outputStdout      = flag.Bool("stdout", false, "output generated content to the stdout")
-	output            = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
-	buildTags         = flag.String("tags", "", "comma-separated list of build tags to apply")
+	lockFieldStr         = flag.String("lockField", "", "mutex lock that will be used for locking callback fields")
+	typeNamesStr         = flag.String("type", "", "comma-separated list of type names; must be set")
+	generateInterface    = flag.Bool("interface", false, "generate eventhub interface")
+	generateRemoveMethod = flag.Bool("generateRemove", false, "generate callback remove method")
+
+	outputStdout = flag.Bool("stdout", false, "output generated content to the stdout")
+	output       = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
+	buildTags    = flag.String("tags", "", "comma-separated list of build tags to apply")
 )
 
 // File holds a single parsed file and associated data.
@@ -346,9 +348,10 @@ func (g *Generator) generate(typeName string) {
 	}
 
 	type TemplateArgs struct {
-		RecvName  string
-		Field     Field
-		Qualifier types.Qualifier
+		RecvName             string
+		Field                Field
+		Qualifier            types.Qualifier
+		GenerateRemoveMethod bool
 	}
 
 	funcMap := template.FuncMap{
@@ -379,6 +382,8 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 	}
 }
 
+{{ if .GenerateRemoveMethod -}}
+
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} (needle {{ .Field.CallbackTypeName .Qualifier -}}) (found bool) {
 
 	var newcallbacks {{ .Field.CallbackSliceType | typeString }}
@@ -397,6 +402,8 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 
 	return found
 }
+
+{{- end }}
 
 `))
 
@@ -456,6 +463,8 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) Emit{{- .Field.EventName -}}
 	}
 }
 
+{{ if .GenerateRemoveMethod -}}
+
 func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName -}} By {{- .Field.CallbackMapKeyType | typeString -}} (
 	{{- .Field.CallbackMapKeyType | typeString | camelCase }} {{ .Field.CallbackMapKeyType | typeString -}}, needle {{ .Field.CallbackTypeName .Qualifier -}}
 ) (found bool) {
@@ -481,6 +490,8 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 
 	return found
 }
+
+{{- end }}
 `))
 
 	// scan imports in the first run
@@ -514,9 +525,10 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		}
 
 		err := t.Execute(&g.buf, TemplateArgs{
-			Field:     field,
-			RecvName:  recvName,
-			Qualifier: qf,
+			Field:                field,
+			RecvName:             recvName,
+			Qualifier:            qf,
+			GenerateRemoveMethod: *generateRemoveMethod,
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -525,13 +537,13 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 
 	if *generateInterface {
 		err = eventHubTemplate.Execute(&g.buf, struct {
-			StructName string
-			Fields     []Field
-			Qualifier  types.Qualifier
+			StructName           string
+			Fields               []Field
+			Qualifier            types.Qualifier
 		}{
-			StructName: g.callbackFields[0].StructName,
-			Fields:     g.callbackFields,
-			Qualifier:  qf,
+			StructName:           g.callbackFields[0].StructName,
+			Fields:               g.callbackFields,
+			Qualifier:            qf,
 		})
 
 		if err != nil {
