@@ -318,13 +318,16 @@ func (g *Generator) generate(typeName string) {
 	}
 
 	conf := types.Config{Importer: importer.Default()}
-	pkgReflect, err := conf.Importer.Import("reflect")
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	var usedImports = map[string]*types.Package{
-		pkgReflect.Name(): pkgReflect,
+	var usedImports = map[string]*types.Package{}
+	var err error
+
+	if *generateRemoveMethod {
+		pkgReflect, err := conf.Importer.Import("reflect")
+		if err != nil {
+			log.Fatal(err)
+		}
+		usedImports[pkgReflect.Name()] = pkgReflect
 	}
 
 	pkgTypes := g.pkg.pkg.Types
