@@ -180,7 +180,6 @@ func (g *Generator) generate(typeName string) {
 			switch decl := node.(type) {
 
 			case *ast.ImportSpec:
-				log.Printf("imports: %+v", decl)
 
 			case *ast.FuncDecl:
 				// skip functions that don't have receiver
@@ -281,7 +280,6 @@ func (g *Generator) generate(typeName string) {
 							isMapSlice = true
 
 						default:
-							log.Printf("%v not a slice type or map[string]slice type", field.Names)
 							continue
 
 						}
@@ -312,7 +310,6 @@ func (g *Generator) generate(typeName string) {
 				}
 
 			default:
-				// log.Printf("node: %+v", decl)
 				return true
 			}
 
