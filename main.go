@@ -127,19 +127,26 @@ type Generator struct {
 
 func (g *Generator) parsePackage(patterns []string, tags []string) {
 	cfg := &packages.Config{
-		Mode: packages.LoadSyntax,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+			packages.NeedImports |
+			packages.NeedTypes | packages.NeedTypesSizes |
+			packages.NeedTypesInfo | packages.NeedFiles |
+			packages.NeedSyntax | packages.NeedTypesInfo,
 		// TODO: Need to think about constants in test files. Maybe write type_string_test.go
 		// in a separate pass? For later.
 		Tests:      false,
 		BuildFlags: []string{fmt.Sprintf("-tags=%s", strings.Join(tags, " "))},
 	}
+
 	pkgs, err := packages.Load(cfg, patterns...)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if len(pkgs) != 1 {
 		log.Fatalf("error: %d packages found", len(pkgs))
 	}
+
 	g.addPackage(pkgs[0])
 }
 
@@ -416,11 +423,18 @@ type {{ .StructName }}EventHub interface {
 	On{{- .EventName -}} By {{- .CallbackMapKeyType | typeString -}} (
 		{{- .CallbackMapKeyType | typeString | camelCase }} {{ .CallbackMapKeyType | typeString -}}, cb {{ .CallbackTypeName $.Qualifier -}}
 	)
+{{ if $.GenerateRemoveMethod -}}
+	RemoveOn{{- .EventName -}} By {{- .CallbackMapKeyType | typeString -}} (
+		{{- .CallbackMapKeyType | typeString | camelCase }} {{ .CallbackMapKeyType | typeString -}}, cb {{ .CallbackTypeName $.Qualifier -}}
+	)
+{{ end }}
+
 {{- else }}
 	On{{- .EventName -}} (cb {{ .CallbackTypeName $.Qualifier -}} )
-	{{- if .GenerateRemoveMethod -}}
+{{ if $.GenerateRemoveMethod -}}
 	RemoveOn{{- .EventName -}} (cb {{ .CallbackTypeName $.Qualifier -}} )
-	{{- end }}
+{{ end }}
+
 {{- end }}
 {{ end }}
 }
@@ -543,10 +557,12 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 			StructName           string
 			Fields               []Field
 			Qualifier            types.Qualifier
+			GenerateRemoveMethod bool
 		}{
 			StructName:           g.callbackFields[0].StructName,
 			Fields:               g.callbackFields,
 			Qualifier:            qf,
+			GenerateRemoveMethod: *generateRemoveMethod,
 		})
 
 		if err != nil {
