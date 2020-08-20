@@ -418,6 +418,9 @@ type {{ .StructName }}EventHub interface {
 	)
 {{- else }}
 	On{{- .EventName -}} (cb {{ .CallbackTypeName $.Qualifier -}} )
+	{{- if .GenerateRemoveMethod -}}
+	RemoveOn{{- .EventName -}} (cb {{ .CallbackTypeName $.Qualifier -}} )
+	{{- end }}
 {{- end }}
 {{ end }}
 }
