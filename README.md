@@ -53,3 +53,12 @@ func (S *Stream) EmitMessage() {
 ```
 
 You could register the callback using `On*` methods, and trigger callbacks using `Emit*` methods.
+
+
+# See Also
+
+- requestgen <https://github.com/c9s/requestgen>
+
+# License
+
+MIT License
