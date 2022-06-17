@@ -44,6 +44,7 @@ type Package struct {
 	files []*File
 }
 
+// Field stores the field information
 type Field struct {
 	File           *ast.File
 	StructName     string
