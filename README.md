@@ -5,7 +5,7 @@ callbackgen generates callback pattern for your callback fields.
 ## Installation
 
 ```
-go get github.com/c9s/callbackgen
+go install github.com/c9s/callbackgen@latest
 ```
 
 ## Usage
