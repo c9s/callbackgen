@@ -517,14 +517,17 @@ func ( {{- .RecvName }} *{{ .Field.StructName -}} ) RemoveOn{{- .Field.EventName
 		types.TypeString(field.CallbackParamsTuple(), qf)
 	}
 
-	g.Printf("import (")
-	g.Newline()
-	for _, importedPkg := range usedImports {
-		g.Printf("\t%q", importedPkg.Path())
+	// an empty import block is valid Go but noise in the generated file
+	if len(usedImports) > 0 {
+		g.Printf("import (")
+		g.Newline()
+		for _, importedPkg := range usedImports {
+			g.Printf("\t%q", importedPkg.Path())
+			g.Newline()
+		}
+		g.Printf(")")
 		g.Newline()
 	}
-	g.Printf(")")
-	g.Newline()
 
 	for _, field := range g.callbackFields {
 		recvName, ok := g.structTypeReceiverNames[field.StructTypeName]
