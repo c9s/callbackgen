@@ -1,6 +1,6 @@
 module github.com/c9s/callbackgen
 
-go 1.26.0
+go 1.27.4
 
 require golang.org/x/tools v0.52.0
 
